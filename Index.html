@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Waygrounds Arena: IT100 & CC 106</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        arcade: {
+                            purple: '#8b5cf6',
+                            pink: '#ec4899',
+                            cyan: '#06b6d4',
+                            yellow: '#f59e0b',
+                            green: '#10b981',
+                            dark: '#0f172a',
+                            panel: '#1e293b'
+                        }
+                    },
+                    animation: {
+                        'float': 'floatAnim 3s ease-in-out infinite',
+                        'pulse-glow': 'pulseGlow 2s infinite',
+                        'pop': 'popAnim 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                    },
+                    keyframes: {
+                        floatAnim: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { boxShadow: '0 0 15px rgba(6, 182, 212, 0.4)' },
+                            '50%': { boxShadow: '0 0 30px rgba(6, 182, 212, 0.8)' },
+                        },
+                        popAnim: {
+                            '0%': { transform: 'scale(0.8)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,0.2) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,0.2) 0, transparent 50%);
+            background-attachment: fixed;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .option-correct {
+            background: rgba(16, 185, 129, 0.2) !important;
+            border-color: #10b981 !important;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+            transform: scale(1.02);
+            z-index: 10;
+        }
+        .option-incorrect {
+            background: rgba(239, 68, 68, 0.2) !important;
+            border-color: #ef4444 !important;
+            opacity: 0.9;
+        }
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particleAnim 1s ease-out forwards;
+        }
+        @keyframes particleAnim {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+        button, * {
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-arcade-cyan selection:text-white">
+
+    <!-- Top Header -->
+    <header class="w-full glass-panel sticky top-0 z-50 px-4 py-3 shadow-lg">
+        <div class="max-w-3xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-arcade-purple to-arcade-cyan flex items-center justify-center text-white font-black text-xl shadow-lg shadow-arcade-cyan/30 animate-float">
+                    <i class="fa-solid fa-bolt-lightning"></i>
+                </div>
+                <div>
+                    <h1 id="header-title" class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-arcade-cyan to-arcade-purple bg-clip-text text-transparent">Waygrounds Arena</h1>
+                    <p id="header-subtitle" class="text-[10px] sm:text-xs text-slate-400 uppercase tracking-widest font-semibold">Select Course</p>
+                </div>
+            </div>
+            <div id="header-stats" class="hidden flex items-center space-x-3 sm:space-x-4 text-sm font-bold">
+                <div class="glass-panel px-3 py-1.5 rounded-full flex items-center space-x-2">
+                    <i class="fa-solid fa-star text-arcade-yellow"></i>
+                    <span id="stat-score" class="text-white">0</span>
+                </div>
+                <div class="glass-panel px-3 py-1.5 rounded-full flex items-center space-x-2">
+                    <i class="fa-solid fa-fire text-orange-500"></i>
+                    <span id="stat-streak" class="text-white">0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex items-center justify-center p-4 sm:p-6 w-full relative">
+        
+        <!-- SCREEN 1: WELCOME & COURSE SELECTION -->
+        <div id="screen-welcome" class="w-full max-w-md glass-panel p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6 animate-pop">
+            <div class="text-center space-y-2">
+                <div class="inline-block p-4 rounded-2xl bg-arcade-cyan/10 border border-arcade-cyan/30 text-arcade-cyan text-3xl mb-1 animate-pulse-glow">
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-white">Waygrounds Quiz Arena</h2>
+                <p class="text-sm text-slate-400">Choose your subject, enter your nickname, and master every single question!</p>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Course Selector -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-widest text-arcade-cyan mb-2">Select Subject / Course</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div onclick="selectCourse('it100')" id="btn-course-it100" class="course-btn p-4 rounded-2xl border-2 border-arcade-cyan bg-arcade-cyan/15 text-white font-bold text-sm flex flex-col items-center justify-center space-y-1 transition-all shadow-lg shadow-arcade-cyan/20 cursor-pointer select-none">
+                            <i class="fa-solid fa-table-cells text-xl text-arcade-cyan pointer-events-none"></i>
+                            <span class="pointer-events-none">IT 100</span>
+                            <span class="text-[10px] font-normal text-slate-300 pointer-events-none">Spreadsheets & Data</span>
+                        </div>
+                        <div onclick="selectCourse('cc106')" id="btn-course-cc106" class="course-btn p-4 rounded-2xl border-2 border-slate-700 bg-slate-900/80 text-slate-400 font-bold text-sm flex flex-col items-center justify-center space-y-1 transition-all hover:border-slate-600 cursor-pointer select-none">
+                            <i class="fa-solid fa-mobile-screen text-xl text-arcade-purple pointer-events-none"></i>
+                            <span class="pointer-events-none">CC 106</span>
+                            <span class="text-[10px] font-normal text-slate-400 pointer-events-none">App Dev & Emerging Tech</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nickname Input -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-widest text-arcade-cyan mb-2">Player Nickname</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                            <i class="fa-solid fa-user-ninja"></i>
+                        </span>
+                        <input type="text" id="player-name-input" placeholder="e.g. CodeNinja99" maxlength="20"
+                            class="w-full pl-11 pr-4 py-3.5 bg-slate-900/80 border-2 border-slate-700 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-arcade-cyan focus:ring-4 focus:ring-arcade-cyan/25 transition-all font-bold text-base">
+                    </div>
+                </div>
+
+                <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-700/50 flex items-center gap-3 text-xs text-slate-300">
+                    <i class="fa-solid fa-rotate-left text-arcade-cyan text-base"></i>
+                    <span><strong>Retake Mode Active:</strong> Wrongly answered questions will automatically return at the end until mastered!</span>
+                </div>
+
+                <button onclick="startQuiz()" class="w-full py-4 bg-gradient-to-r from-arcade-cyan to-arcade-purple text-white font-black rounded-2xl shadow-xl shadow-arcade-purple/25 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center space-x-3 text-lg cursor-pointer">
+                    <span>START ARENA</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+            
+            <div class="text-center pt-3 border-t border-slate-700/50">
+                <p id="question-count-hint" class="text-xs font-medium text-slate-400">50 Randomized Questions loaded</p>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: QUIZ ARENA -->
+        <div id="screen-quiz" class="w-full max-w-2xl hidden space-y-6">
+            
+            <!-- Progression Meter & Header Bar -->
+            <div class="glass-panel p-4 rounded-3xl space-y-3">
+                <div class="flex justify-between items-end">
+                    <div class="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-arcade-cyan"></i>
+                        Mastered: <span id="completed-q-num" class="text-arcade-green text-lg font-black">0</span> / <span id="total-unique-q-num">50</span>
+                        <span id="queue-badge" class="hidden text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-bold ml-1">
+                            <i class="fa-solid fa-repeat mr-1"></i><span id="retake-count">0</span> queued
+                        </span>
+                    </div>
+                    <div class="text-xs font-bold text-orange-400 bg-orange-500/10 px-3 py-1 rounded-lg border border-orange-500/20 flex items-center gap-1.5">
+                        <i class="fa-solid fa-fire"></i>
+                        Streak: <span id="quiz-streak">0x</span>
+                    </div>
+                </div>
+                <!-- Progression Meter Bar -->
+                <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-700 shadow-inner">
+                    <div id="progress-bar" class="h-full bg-gradient-to-r from-arcade-cyan to-arcade-purple transition-all duration-500 ease-out" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="glass-panel p-6 sm:p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+                <!-- Retake Tag Indicator -->
+                <div id="retake-tag" class="hidden mb-3 inline-flex items-center gap-1.5 text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full">
+                    <i class="fa-solid fa-rotate-left"></i> Repeat Practice Question
+                </div>
+
+                <!-- Question Text -->
+                <h3 id="question-text" class="text-lg sm:text-xl font-bold text-white leading-relaxed mb-6">
+                    Loading question...
+                </h3>
+
+                <!-- Options Grid -->
+                <div id="options-container" class="grid grid-cols-1 gap-3 sm:gap-4 relative z-10">
+                    <!-- Dynamic Buttons -->
+                </div>
+                
+                <!-- Feedback overlay (hidden by default) -->
+                <div id="feedback-overlay" class="absolute inset-0 z-0 hidden items-center justify-center pointer-events-none opacity-10 transition-opacity duration-300">
+                    <i id="feedback-icon" class="fa-solid text-9xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: RESULTS SCREEN -->
+        <div id="screen-results" class="w-full max-w-md glass-panel p-6 sm:p-8 rounded-3xl shadow-2xl hidden space-y-8 text-center relative overflow-hidden">
+            <div class="w-24 h-24 mx-auto rounded-3xl bg-gradient-to-tr from-arcade-yellow to-orange-500 flex items-center justify-center text-white text-5xl shadow-2xl shadow-arcade-yellow/40 animate-float">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+
+            <div class="space-y-2">
+                <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">ARENA MASTERED!</h2>
+                <p id="results-player-name" class="text-lg text-arcade-cyan font-bold">Amazing job!</p>
+                <p class="text-xs text-slate-400">You successfully answered every question correctly!</p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-900/80 p-4 rounded-2xl border border-slate-700">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Final Score</div>
+                    <div id="res-score" class="text-3xl font-black text-arcade-yellow">0</div>
+                </div>
+                <div class="bg-slate-900/80 p-4 rounded-2xl border border-slate-700">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">First-Try Mastery</div>
+                    <div id="res-accuracy" class="text-3xl font-black text-arcade-cyan">0%</div>
+                </div>
+                <div class="col-span-2 bg-slate-900/80 p-4 rounded-2xl border border-slate-700 flex justify-between items-center">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Retaken Questions</div>
+                    <div id="res-retakes" class="text-xl font-black text-amber-400 flex items-center gap-2">
+                        <i class="fa-solid fa-rotate-left"></i> <span id="res-retakes-val">0</span>
+                    </div>
+                </div>
+                <div class="col-span-2 bg-slate-900/80 p-4 rounded-2xl border border-slate-700 flex justify-between items-center">
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Highest Streak</div>
+                    <div id="res-streak" class="text-xl font-black text-orange-400 flex items-center gap-2">
+                        <i class="fa-solid fa-fire"></i> <span id="res-streak-val">0x</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="space-y-3 pt-4 border-t border-slate-700/50">
+                <button onclick="shareScore()" class="w-full py-4 bg-gradient-to-r from-arcade-cyan to-arcade-purple text-white font-black rounded-2xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center space-x-2 text-lg cursor-pointer">
+                    <i class="fa-solid fa-share-nodes"></i>
+                    <span>Share Score with Friends</span>
+                </button>
+                <button onclick="restartQuiz()" class="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl transition-all flex items-center justify-center space-x-2 cursor-pointer">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>Play Again</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer Guide -->
+    <footer class="w-full text-center py-5 glass-panel text-sm font-medium text-slate-400 mt-auto">
+        <button onclick="openShareGuide()" class="text-arcade-cyan hover:text-white transition-colors cursor-pointer flex items-center justify-center w-full gap-2">
+            <i class="fa-solid fa-circle-question"></i> 
+            How to share this Waygrounds quiz with friends?
+        </button>
+    </footer>
+
+    <!-- SHARE GUIDE MODAL -->
+    <div id="share-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="w-full max-w-md glass-panel border border-slate-700 p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6 transform scale-95 transition-transform duration-300" id="share-modal-content">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-black text-white flex items-center space-x-3">
+                    <i class="fa-solid fa-share-nodes text-arcade-cyan"></i>
+                    <span>How to Share with Friends</span>
+                </h3>
+                <button onclick="closeShareGuide()" class="text-slate-400 hover:text-white bg-slate-800 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4 text-sm text-slate-300">
+                <div class="p-4 bg-slate-900/80 rounded-2xl border border-slate-700">
+                    <strong class="text-arcade-cyan block mb-2 text-base"><i class="fa-solid fa-link mr-2"></i>1. Free Web Hosting (Instant Live Link)</strong>
+                    Drag and drop this `.html` file into <a href="https://drop.netlify.com/" target="_blank" class="text-arcade-purple hover:underline font-bold">Netlify Drop</a> (free). It instantly gives you a live URL to send to your group chat!
+                </div>
+                <div class="p-4 bg-slate-900/80 rounded-2xl border border-slate-700">
+                    <strong class="text-arcade-cyan block mb-2 text-base"><i class="fa-solid fa-file-code mr-2"></i>2. Share the File Directly</strong>
+                    Save this file as <code>it100_cc106_arena.html</code> and send it via Messenger, Discord, or Google Drive. Your friends can open it in any browser.
+                </div>
+            </div>
+
+            <button onclick="closeShareGuide()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all cursor-pointer">
+                Got it, thanks!
+            </button>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-[60] glass-panel border-2 border-arcade-green text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 transition-all duration-300 transform -translate-y-20 opacity-0 font-bold">
+        <i class="fa-solid fa-circle-check text-arcade-green text-xl"></i>
+        <span id="toast-msg">Copied to clipboard!</span>
+    </div>
+
+    <!-- JavaScript Game Logic with Retake Deck Support & Question Banks -->
+    <script>
+        // FULL IT100 QUESTION BANK (50 Items)
+        const it100Questions = [
+            { id: "it1", q: "A fee register stores program in A2:A200 and payment in B2:B200. Which formula counts IT students who paid at least 1500?", correct: '=COUNTIFS(A2:A200,"IT", B2:B200,">=1500")', incorrect: ['=SUMIFS(B2:B200,A2:A200,"IT", B2:B200,">=1500")', '=COUNTIFS(A2:A200,"IT", B2:B200,">1500")', '=COUNTIFS(A2:A200,"IT", B2:B200,"<1500")'] },
+            { id: "it2", q: "A multiplication grid uses prices down column B and quantities across row 2. In C3, which formula can be copied across and down?", correct: '=$B3*C$2', incorrect: ['=$B$3*C2', '=B$3*$C2', '=B3*$C$2'] },
+            { id: "it3", q: 'A2:A4 contains Lab, Office, Lab; B2:B4 contains 2, 5, 3; C2:C4 contains 100, 40, 150. What does =SUMPRODUCT((A2:A4="Lab")*B2:B4*C2:C4) return?', correct: '650', incorrect: ['850', '500', '250'] },
+            { id: "it4", q: "A VLOOKUP must find ID 208 in unsorted A2:D50 and return column D. Which formula requests an exact match?", correct: '=VLOOKUP(208, A2:D50,4,FALSE)', incorrect: ['=VLOOKUP(208, A2:D50,3,TRUE)', '=VLOOKUP(208,A2:D50,4,TRUE)', '=VLOOKUP(208, A2:D50,3,FALSE)'] },
+            { id: "it5", q: "In D6, the formula is =B$3*$C6. It is copied to F9. Which formula results?", correct: '=D$3*$C9', incorrect: ['=D$3*$E6', '=B$3*$C9', '=D$6*$E9'] },
+            { id: "it6", q: 'Approval requires a score of at least 80 AND either attendance of at least 90 or an approved waiver. Which test matches this rule?', correct: '=AND(B2>=80,OR(C2>=90, D2="Yes"))', incorrect: ['=OR(B2>=80,AND(C2>=90,D2="Yes"))', '=OR(AND(B2>=80, C2>=90),D2="Yes")', '=AND(B2>=80,AND(C2>=90, D2="Yes"))'] },
+            { id: "it7", q: "An exact lookup returns #N/A for ID 304. A balance of 0 is valid. Which displayed result best distinguishes a missing record?", correct: 'ID not found', incorrect: ['Balance pending', 'Account closed', 'Balance is zero'] },
+            { id: "it8", q: "Four submitted scores are 70, 80, 90, and 100. A fifth entry is 0 because grading is pending. The report must average submitted scores only. What is the result?", correct: '85', incorrect: ['80', '68', '90'] },
+            { id: "it9", q: "A PivotTable shows sales by branch. You need separate monthly totals within each branch. Which change fits?", correct: 'Add Month beneath Branch in Rows', incorrect: ['Add Month beneath Sales in Values', 'Replace Sales with Month in Values', 'Replace Branch with Sales in Rows'] },
+            { id: "it10", q: "A center earned 360000 from 120 bookings, then 420000 from 175 bookings. How did average earnings per booking change?", correct: 'Decreased by 20 percent', incorrect: ['Increased by 17 percent', 'Decreased by 14 percent', 'Increased by 20 percent'] },
+            { id: "it11", q: "Two bars show 72 and 75 with an axis starting at 70. Which statement is supported by those values?", correct: 'The score rose by 3 points', incorrect: ['The score rose by 50 percent', 'The score rose by 150 percent', 'The score rose by 5 points'] },
+            { id: "it12", q: "A dean needs weekly enrollment trends, current enrollment, and program comparisons. Which set best addresses the request?", correct: 'Line chart, total indicator, bar chart', incorrect: ['Bar chart, average indicator, pie chart', 'Line chart, average indicator, scatterplot', 'Pie chart, total indicator, line chart'] },
+            { id: "it13", q: "A photo license requires credit to the creator and a source link. Which credit satisfies those stated terms?", correct: 'Photo by M. Reyes with the original source link', incorrect: ['Photo from the archive with the file size', 'Photo from the web with the download date', 'Photo by M. Reyes with the slide number'] },
+            { id: "it14", q: "A 28-row table compares cost, completion, and satisfaction. Which main-slide treatment best supports the decision?", correct: 'Show the three comparisons and retain the table in an appendix', incorrect: ['Show the full table and emphasize its heading with animation', 'Show the cost comparison and retain the others in an appendix', 'Show the full table and explain only the completion column'] },
+            { id: "it15", q: "A slide title crosses both light and dark areas of a photo. Which treatment gives it the most consistent contrast?", correct: 'Place it on a solid background panel', incorrect: ['Change the title to a narrower font', 'Set the title in alternating colors', 'Add a thin shadow to each character'] },
+            { id: "it16", q: "An offline rehearsal plays a video successfully on the author's laptop. The classroom computer uses different software. What test remains most relevant?", correct: 'Play the delivered deck offline on the classroom computer', incorrect: ['Check the video thumbnail on the author\'s laptop', 'Open a PDF of the deck on the classroom computer', 'Replay the source video online on the author\'s laptop'] },
+            { id: "it17", q: "You must identify the semester when enrollment reversed from growth to decline. Which display is most useful?", correct: 'A line chart ordered by semester', incorrect: ['A bar chart ordered by enrollment', 'A table ordered by program', 'A pie chart grouped by year'] },
+            { id: "it18", q: "On slide 4, blue means Actual; on slide 5, blue means Target. What revision best supports comparison?", correct: 'Use one color for Actual throughout', incorrect: ['Remove the legends from both charts', 'Add a third color to both charts', 'Use the same chart title throughout'] },
+            { id: "it19", q: "A success rate rises from 40 percent to 50 percent. Which statement is accurate?", correct: 'It rose 10 percentage points and 25 percent relative to its original rate', incorrect: ['It rose 25 percentage points and 25 percent relative to its original rate', 'It rose 25 percentage points and 10 percent relative to its original rate', 'It rose 10 percentage points and 10 percent relative to its original rate'] },
+            { id: "it20", q: "A presenter introduces three causes while a paragraph appears word by word. Which revision best synchronizes reading and speech?", correct: 'Reveal one cause when its explanation begins', incorrect: ['Reveal one word at a fixed half-second interval', 'Reveal the whole paragraph after all explanations', 'Reveal all causes while displaying a second paragraph'] },
+            { id: "it21", q: "Survey respondents report trouble completing a form. A short demo shows the confusing step. Which sequence best supports a redesign proposal?", correct: 'Survey finding, relevant demo, proposed change', incorrect: ['Relevant demo, proposed change, unrelated finding', 'Full response list, proposed change, unrelated demo', 'Proposed change, full response list, closing demo'] },
+            { id: "it22", q: "The audience should see a chart while the presenter sees its detailed assumptions. Where should the assumptions go for the presenter to consult?", correct: 'Speaker notes', incorrect: ['Chart legend', 'Section title', 'Slide footer'] },
+            { id: "it23", q: "A diagram appears all at once, but advancing to the next slide produces a wipe. Which description applies to the wipe?", correct: 'It is a slide transition', incorrect: ['It is an emphasis animation', 'It is an exit animation', 'It is an entrance animation'] },
+            { id: "it24", q: "Only slides using the Title and Content layout need a new footer position. Where should that shared change be made?", correct: 'On the relevant layout in Slide Master view', incorrect: ['On the handout master in Master view', 'On the notes master in Notes view', 'On the title slide in Normal view'] },
+            { id: "it25", q: "A four-step process should advance only when the speaker clicks. Which setup fits?", correct: 'Ordered entrances set to On Click', incorrect: ['Ordered entrances with fixed slide timings', 'Ordered entrances set to After Previous', 'Ordered entrances set to With Previous'] },
+            { id: "it26", q: "A video demonstrates a machine's three operating stages. If playback fails, which fallback preserves the instructional sequence?", correct: 'Three still frames labeled by operating stage', incorrect: ['A transcript listing the video\'s background music', 'A screenshot showing the video\'s playback controls', 'A title slide naming the machine\'s manufacturer'] },
+            { id: "it27", q: "An animation list is ordered Problem, Solution, Evidence; the talk is Problem, Evidence, Solution. What is the most direct correction?", correct: 'Move Evidence before Solution in the animation list', incorrect: ['Apply a slide transition before the evidence appears', 'Shorten every effect duration in the animation list', 'Set every object to disappear after its animation'] },
+            { id: "it28", q: "A menu links to Budget, Schedule, and Results. After opening Results, the presenter must choose another topic. Which addition best supports this?", correct: 'A Results link back to the menu', incorrect: ['A Results link to the source chart', 'A Results link to the final slide', 'A Results link to the next slide'] },
+            { id: "it29", q: "A collaborator replaced a paragraph this morning. You need its exact wording from yesterday. Which feature should you inspect?", correct: 'Version history', incorrect: ['Comment history', 'Document outline', 'Sharing settings'] },
+            { id: "it30", q: "An evaluator needs to read a file and leave feedback without changing its text. Which role fits best?", correct: 'Commenter', incorrect: ['Editor', 'Viewer', 'Owner'] },
+            { id: "it31", q: "An AI draft says 62 percent of respondents preferred option A. The source table says 62 people out of 200. What percentage should be reported?", correct: '31 percent', incorrect: ['38 percent', '62 percent', '124 percent'] },
+            { id: "it32", q: "Two staff members must update different sections of one report and review a common final version. Which workflow fits best?", correct: 'Coauthor a shared document with named access', incorrect: ['Edit separate copies and keep the latest timestamp', 'Coauthor a public document with unrestricted access', 'Edit emailed copies and choose the larger file'] },
+            { id: "it33", q: "An external reader should neither edit nor comment. Which role is the closest fit?", correct: 'Viewer', incorrect: ['Commenter', 'Editor', 'Owner'] },
+            { id: "it34", q: "AI minutes state that Ana approved a purchase. The recording says Ana requested another quotation. Which correction is supported?", correct: 'Record Ana\'s request for another quotation', incorrect: ['Record the purchase as rejected by the committee', 'Record Ana\'s conditional purchase approval', 'Record the purchase as approved without attribution'] },
+            { id: "it35", q: "A missing paragraph is found in yesterday's version, but today's file has valid new sections. What is the best recovery approach?", correct: 'Recover the paragraph while preserving valid later edits', incorrect: ['Replace today\'s file with the oldest available version', 'Recreate the paragraph from memory in a separate file', 'Restore yesterday\'s full version and discard later edits'] },
+            { id: "it36", q: "An AI summary cites a real article, but the article studies a different population and does not address the claimed effect. What is the main problem?", correct: 'The cited evidence does not support the claim', incorrect: ['The article\'s title is too long for the report', 'The citation lacks a recent download date', 'The summary uses too few technical terms'] },
+            { id: "it37", q: "A grades file must be edited by two named instructors only. Which sharing arrangement best fits?", correct: 'Restricted access with those instructors as editors', incorrect: ['Restricted access with those instructors as viewers', 'Link access with everyone assigned as editors', 'Link access with everyone assigned as commenters'] },
+            { id: "it38", q: "Corrected revenue changes profit from positive to negative. An AI summary still recommends expansion because profit grew. What should be revised?", correct: 'The profit figure and the expansion rationale', incorrect: ['The revenue figure but not the profit figure', 'The recommendation wording but not its evidence', 'The profit figure but not the recommendation'] },
+            { id: "it39", q: "An approved AI tool can analyze either named customer records or totals by region. The task asks only for regional sales. What input best fits?", correct: 'Regional totals without customer identifiers', incorrect: ['Named transactions with phone numbers removed', 'Named transactions with email addresses removed', 'Customer contact details without transaction values'] },
+            { id: "it40", q: "Quarterly values are 80, 110, 70, and 90. Which caption accurately describes the pattern?", correct: 'The series fluctuated and ended above its starting value', incorrect: ['The series rose steadily and ended above its starting value', 'The series fell steadily and ended below its starting value', 'The series fluctuated and ended below its starting value'] },
+            { id: "it41", q: "A report must be read and printed with its layout preserved; recipients do not need to edit it. Which export best fits?", correct: 'PDF', incorrect: ['CSV', 'TXT', 'DOCX'] },
+            { id: "it42", q: "A linked chart still shows old figures after the workbook changes. What should you check first?", correct: 'Whether its link points to the corrected workbook and can refresh', incorrect: ['Whether its picture size matches the workbook\'s print settings', 'Whether its title matches the worksheet name and file date', 'Whether its legend uses the workbook\'s original font and color'] },
+            { id: "it43", q: "A report and a deck each use the same verified annual total, but one labels it monthly. What remains wrong?", correct: 'The reporting period is inconsistent', incorrect: ['The chart needs a different palette', 'The source workbook is duplicated', 'The total needs a different currency'] },
+            { id: "it44", q: "A slide contains a static picture of a chart. Its workbook changes before submission. Which action updates the slide's evidence?", correct: 'Regenerate the chart picture from the corrected data', incorrect: ['Add a workbook link while retaining the old picture', 'Rename the workbook while retaining the old picture', 'Refresh the slide while leaving the picture unchanged'] },
+            { id: "it45", q: "The report total includes all branches; the slide total excludes South. Both use the same dates and formulas. What most directly explains the difference?", correct: 'The outputs use different branch filters', incorrect: ['The outputs use different chart layouts', 'The outputs use different decimal formats', 'The outputs use different date formats'] },
+            { id: "it46", q: "A group has finished its files but is unsure whether a methodology appendix is required. What should it consult first?", correct: 'The project brief and assessment rubric', incorrect: ['The presentation\'s available slide themes', 'The previous group\'s preferred layout', 'The software\'s standard export settings'] },
+            { id: "it47", q: "Three project outputs disagree. The workbook has been verified against the original transactions. What should guide reconciliation?", correct: 'The verified calculation and its defined reporting scope', incorrect: ['The figure appearing in the most polished document', 'The figure appearing in the most recently saved file', 'The calculation producing the most favorable result'] },
+            { id: "it48", q: "Results show no improvement after a new system was introduced, but the report recommends expansion because improvement was proven. What needs revision?", correct: 'The recommendation\'s claim of demonstrated improvement', incorrect: ['The source totals to support the proposed expansion', 'The result labels to match the existing recommendation', 'The chart scale to make the improvement more visible'] },
+            { id: "it49", q: "A panel asks why some survey responses were excluded. Which reply best demonstrates understanding?", correct: 'Explain the exclusion rule and its effect on interpretation', incorrect: ['Explain the chart colors and their effect on readability', 'Explain the slide layout and its effect on presentation time', 'Explain the file naming and its effect on document sorting'] },
+            { id: "it50", q: "A panel identifies a mismatch between a slide and the verified workbook. Its cause cannot be checked during the session. Which response is best?", correct: 'State the verified value and investigate the mismatch afterward', incorrect: ['State the slide value and investigate the mismatch afterward', 'Average the two values and update the workbook afterward', 'Withhold both values and retain the slide figure afterward'] }
+        ];
+
+        // FULL CC106 QUESTION BANK (75 Items)
+        const cc106Questions = [
+            { id: "cc1", q: "Why is the Android activity lifecycle important?", correct: "It helps manage screen behavior as the app is paused, resumed, or recreated", incorrect: ["It chooses the app's brand colors", "It automatically writes test cases", "It guarantees a smaller installation file"] },
+            { id: "cc2", q: "What is a sensible starting set of components for a login screen?", correct: "Username and password fields with a login button", incorrect: ["A video player and several image galleries", "A long menu without input fields", "A scrolling page containing only paragraphs"] },
+            { id: "cc3", q: "A developer needs to pass a username from one Android activity to another. Which approach is appropriate?", correct: "Place the value in an Intent extra and read it in the receiving activity", incorrect: ["Add it to a random resource file", "Write it only to a debug message", "Change the activity's background color"] },
+            { id: "cc4", q: "What should a developer do before releasing a major update?", correct: "Run appropriate tests, review known risks, and confirm critical workflows still work", incorrect: ["Assume previous tests are sufficient", "Remove the change log", "Skip checks to meet the deadline"] },
+            { id: "cc5", q: "What is a key difference between AR used in games and AR used in engineering?", correct: "Gaming is mainly for entertainment, while engineering can support visualization and problem-solving", incorrect: ["Both have exactly the same goals", "Engineering is only for entertainment", "Gaming never uses 3D objects"] },
+            { id: "cc6", q: "Why does accountability matter in software and IT work?", correct: "It makes practitioners answerable for their decisions and actions", incorrect: ["It removes the need for teamwork", "It guarantees that all projects finish early", "It deals only with debugging"] },
+            { id: "cc7", q: "A form loses the user's entered information after returning to a previous screen. What should the developer investigate?", correct: "How form data is saved and restored during lifecycle changes", incorrect: ["Whether the app uses enough icons", "Whether the menus have animations", "Whether the app has a larger logo"] },
+            { id: "cc8", q: "Which activity is most directly associated with application maintenance?", correct: "Fixing defects and updating the application after release", incorrect: ["Choosing the first project name", "Creating the initial paper sketch only", "Selecting classroom seating"] },
+            { id: "cc9", q: "An Android app repeatedly crashes when moving between screens. Which area should be examined first?", correct: "Lifecycle handling and saved screen state", incorrect: ["The decorative icons", "The number of menu items", "The font family"] },
+            { id: "cc10", q: "Which Java structure can catch and handle an exception raised by invalid input or another runtime problem?", correct: "try { ... } catch (...) { ... }", incorrect: ["intent.putExtra(...)", "resource.add(...)", "debug.log(...)"] },
+            { id: "cc11", q: "Nanotechnology primarily works with materials at what scale?", correct: "Nanometer scale", incorrect: ["Centimeter scale", "Meter scale", "Kilometer scale"] },
+            { id: "cc12", q: "Which Android mechanism can be used to open a dashboard from a login screen?", correct: "An Intent", incorrect: ["A resource folder", "A background service in every case", "A color theme"] },
+            { id: "cc13", q: "What is the role of documentation in a software project?", correct: "It records requirements, design decisions, usage instructions, and maintenance information", incorrect: ["It prevents all future changes", "It is needed only after a failure", "It replaces the source code"] },
+            { id: "cc14", q: "At which development stage are usability problems most likely to be identified through user trials?", correct: "Testing", incorrect: ["Deployment", "Requirement naming", "Software installation"] },
+            { id: "cc15", q: "Why should a project team define test cases before evaluating an application?", correct: "To establish repeatable checks for expected behavior and quality", incorrect: ["To choose random screen colors", "To avoid recording defects", "To replace project planning"] },
+            { id: "cc16", q: "What should be an early step in an ethical review of a proposed application?", correct: "Identify affected stakeholders and consider possible impacts", incorrect: ["Ignore laws and regulations", "Consider profit as the only objective", "Avoid recording decisions"] },
+            { id: "cc17", q: "When an app collects personal information, which practice is ethically appropriate?", correct: "Explain the collection and obtain informed consent where required", incorrect: ["Collect all possible data without notice", "Share the information freely with any company", "Ignore privacy requirements to save time"] },
+            { id: "cc18", q: "How can AR support medical professionals during an operation?", correct: "By displaying relevant patient information over the real-world view", incorrect: ["By removing the need for medical imaging", "By replacing all surgeons with robots", "By limiting the system to entertainment"] },
+            { id: "cc19", q: "Why should an application handle invalid input instead of crashing?", correct: "It helps provide useful feedback and protects the app's stability", incorrect: ["It makes source code unnecessary", "It removes the need for data validation", "It guarantees all users enter correct information"] },
+            { id: "cc20", q: "Which example best represents biotechnology?", correct: "Using genetic engineering to improve crops", incorrect: ["Creating a blockchain ledger", "Designing a virtual reality game", "Building a mobile navigation menu"] },
+            { id: "cc21", q: "Which set correctly represents common Big Data characteristics known as the 5Vs?", correct: "Volume, velocity, variety, veracity, and value", incorrect: ["Vision, value, voice, version, view", "Video, virtuality, version, validity, visibility", "Volume, voltage, vision, visual, velocity"] },
+            { id: "cc22", q: "What should a developer do to improve accessibility for users with different visual abilities?", correct: "Use readable text and sufficient color contrast", incorrect: ["Use decorative fonts everywhere", "Add as many icons as possible", "Make navigation paths more complicated"] },
+            { id: "cc23", q: "Which example is most closely related to machine learning?", correct: "A model that learns patterns from examples to make predictions", incorrect: ["A fixed printed timetable", "A button that always opens the same page", "A static image file"] },
+            { id: "cc24", q: "A developer finds that a teammate is using unlicensed software. What is the most professional response?", correct: "Follow the appropriate reporting process and recommend a lawful alternative", incorrect: ["Copy the software for personal use", "Publicly shame the teammate online", "Ignore the issue permanently"] },
+            { id: "cc25", q: "What is the primary role of a professional code of conduct for IT workers?", correct: "To guide ethical and professional decisions", incorrect: ["To specify only computer hardware brands", "To guarantee downloads happen faster", "To remove all legal responsibilities"] },
+            { id: "cc26", q: "Which quality most directly supports the usability of a mobile app?", correct: "Clear navigation and a responsive interface", incorrect: ["Large images on every screen", "Decorative animations regardless of purpose", "Complex navigation paths"] },
+            { id: "cc27", q: "What is the difference between explicit and implicit Android intents?", correct: "Explicit intents name a target component; implicit intents describe an action for the system to resolve", incorrect: ["Explicit intents are only for images", "Implicit intents always name a specific activity", "Both require exactly the same target declaration"] },
+            { id: "cc28", q: "Why is nanotechnology regarded as an emerging technology?", correct: "It enables the manipulation of matter at atomic and molecular scales", incorrect: ["It only applies to software coding", "It eliminates all other sciences", "It is simply another name for cloud storage"] },
+            { id: "cc29", q: "What should a developer do when a third-party library has a known security vulnerability?", correct: "Assess the risk and update, replace, or mitigate the vulnerable dependency", incorrect: ["Keep using it without review", "Remove all tests", "Publish the app and wait for complaints"] },
+            { id: "cc30", q: "Which Android layout is a useful choice when positioning interface elements flexibly for different screen sizes?", correct: "ConstraintLayout", incorrect: ["FrameLayout in every situation", "A fixed-size image only", "A plain text file"] },
+            { id: "cc31", q: "Which is a common ethical concern in the use of emerging technologies?", correct: "Protection of personal information", incorrect: ["Higher screen resolution", "Faster internet connection", "Longer battery life"] },
+            { id: "cc32", q: "What does the term Big Data commonly refer to?", correct: "Datasets whose volume, speed, or variety challenge traditional processing methods", incorrect: ["A single short text message", "Only data stored on paper", "A programming language for Android layouts"] },
+            { id: "cc33", q: "What should be included in a useful mobile application test plan?", correct: "Test cases covering functionality, usability, and performance", incorrect: ["Random menus and decorative images", "Unvalidated resources only", "Only the app's background color"] },
+            { id: "cc34", q: "A school is selecting an AR learning tool. Which consideration is most important?", correct: "Whether it works with available devices and curriculum", incorrect: ["How many advertisements it displays", "How popular it is among gamers", "The developer's social media following"] },
+            { id: "cc35", q: "During project presentation, what is a useful way to demonstrate that an application meets its goals?", correct: "Demonstrate key user workflows and explain how they satisfy requirements", incorrect: ["Show only the title screen", "Avoid discussing requirements", "Skip testing evidence"] },
+            { id: "cc36", q: "Which statement best describes artificial intelligence (AI)?", correct: "Computer systems performing tasks that normally require aspects of human intelligence", incorrect: ["A method used only to create hardware cables", "A replacement name for databases", "A type of screen layout"] },
+            { id: "cc37", q: "In an application's navigation flow, what is mainly affected by user interaction?", correct: "The sequence of screens and navigation paths", incorrect: ["The operating system brand", "The number of code editors installed", "The color of the device case"] },
+            { id: "cc38", q: "Why prepare a project plan before coding a mini-project?", correct: "To set objectives, scope, tasks, and a realistic schedule", incorrect: ["To make debugging unnecessary", "To generate every feature automatically", "To guarantee installation on every device"] },
+            { id: "cc39", q: "Which tool is commonly used with Android projects to write and run unit tests?", correct: "JUnit", incorrect: ["Manifest", "Logcat", "Gradle only as a test assertion library"] },
+            { id: "cc40", q: "Why should an app's performance be measured instead of judged only by appearance?", correct: "Measurements can reveal slow operations, high memory use, and other bottlenecks", incorrect: ["Visual design always determines speed", "Performance is relevant only to games", "Measurements are never useful"] },
+            { id: "cc41", q: "Which is the best example of informed consent in an app?", correct: "Explain what data is collected and why, then request permission when appropriate", incorrect: ["Collect data silently because it is technically possible", "Make consent wording unreadable", "Assume every user agrees automatically"] },
+            { id: "cc42", q: "An app performs well on high-end phones but lags on lower-cost devices. What should the team do?", correct: "Measure resource use and optimize for lower hardware capabilities", incorrect: ["Add more animations", "Remove all error handling", "Increase logging without examining performance"] },
+            { id: "cc43", q: "Which practice supports responsible handling of user passwords?", correct: "Use secure password-handling practices, such as salted password hashing on the server", incorrect: ["Store all passwords in plain text", "Send passwords to unrelated third parties", "Reuse one public password for all users"] },
+            { id: "cc44", q: "Which Android mechanism is commonly used to attach a value such as a username to an intent?", correct: "intent.putExtra(\"username\", value)", incorrect: ["resource.add(\"username\", value)", "activity.setData(\"username\", value)", "debug.log(\"username\", value)"] },
+            { id: "cc45", q: "Which statement best distinguishes a button from a menu in an interface?", correct: "A button usually triggers a specific action, while a menu presents several choices", incorrect: ["Menus can only display images", "Buttons are always used for navigation and menus only submit forms", "They are interchangeable and have identical purposes"] },
+            { id: "cc46", q: "A company wants to trace products as they move through a food supply chain. Which technology is a strong option?", correct: "Blockchain, because records can be shared and traced", incorrect: ["Nanotechnology, because it changes screen size", "ARKit, because it builds iOS interfaces", "UI/UX design, because it arranges buttons"] },
+            { id: "cc47", q: "What should a good defect report contain?", correct: "Steps to reproduce, expected and actual results, environment, and relevant evidence", incorrect: ["Only the developer's opinion", "A list of unrelated features", "Only a screenshot with no explanation in every case"] },
+            { id: "cc48", q: "Which AR process keeps virtual objects positioned correctly in relation to real-world surfaces?", correct: "Real-time 3D registration", incorrect: ["Data encryption", "Application deployment", "Exception handling"] },
+            { id: "cc49", q: "Why should developers follow recognized application-development best practices?", correct: "They support maintainability, usability, reliability, and performance", incorrect: ["They are useful only for very large companies", "They eliminate all testing", "They require every screen to have animation"] },
+            { id: "cc50", q: "Why should developers manage memory and other application resources carefully?", correct: "It can reduce resource-related slowdowns and crashes", incorrect: ["It creates new interface elements automatically", "It makes testing unnecessary", "It guarantees instant installation"] },
+            { id: "cc51", q: "Which approach can help an app remain usable on different screen sizes?", correct: "Use flexible layouts and test on multiple screen configurations", incorrect: ["Hard-code every element to one screen size", "Make text unreadably small", "Disable scrolling everywhere"] },
+            { id: "cc52", q: "Which description best matches cloud computing?", correct: "Using network-accessible computing resources and services on demand", incorrect: ["A phone's local storage only", "A type of physical chain", "A method of arranging buttons"] },
+            { id: "cc53", q: "How do privacy and intellectual property differ?", correct: "Privacy concerns personal information, while intellectual property protects creations and original work", incorrect: ["Both refer only to hardware maintenance", "They have exactly the same meaning", "Intellectual property has no relevance to software"] },
+            { id: "cc54", q: "Which action is most appropriate when an application error is reported by a user?", correct: "Reproduce the issue, inspect evidence, identify the cause, and verify the fix", incorrect: ["Dismiss the report without checking", "Blame the user immediately", "Remove the feature without analysis"] },
+            { id: "cc55", q: "What is the main purpose of usability testing with representative users?", correct: "To observe whether users can complete tasks effectively and identify difficulties", incorrect: ["To count only lines of code", "To replace security testing completely", "To test only the app icon"] },
+            { id: "cc56", q: "What is a key benefit of using a prototype during app development?", correct: "It allows the team to examine ideas and gather feedback before full implementation", incorrect: ["It guarantees a perfect final product", "It removes the need to understand users", "It automatically secures all user data"] },
+            { id: "cc57", q: "What is the purpose of an application programming interface (API)?", correct: "To define how software components or services communicate", incorrect: ["To design the device casing", "To replace all user interfaces", "To guarantee that a network never fails"] },
+            { id: "cc58", q: "Which statement correctly compares blockchain and biotechnology?", correct: "Blockchain can support secure, traceable records; biotechnology applies technology to biological systems", incorrect: ["Blockchain studies biological cells, while biotechnology records digital payments", "Both are limited to agriculture", "Biotechnology is only theoretical and cannot be applied"] },
+            { id: "cc59", q: "Which emerging technology is most directly concerned with using biological processes or organisms to develop products or solutions?", correct: "Biotechnology", incorrect: ["Blockchain", "Nanotechnology", "Augmented reality"] },
+            { id: "cc60", q: "What is regression testing intended to check?", correct: "Whether recent changes have broken features that previously worked", incorrect: ["Whether the app's logo looks attractive", "Whether the project has enough team members", "Whether the app has a new name"] },
+            { id: "cc61", q: "Which phase usually determines the application's goals, target users, and requirements?", correct: "Requirements analysis", incorrect: ["Deployment", "Maintenance", "Final presentation"] },
+            { id: "cc62", q: "What is the purpose of debugging during application development?", correct: "To locate and correct errors in the program", incorrect: ["To automatically create all features", "To eliminate the need for testing", "To guarantee faster downloads"] },
+            { id: "cc63", q: "Why should a mobile interface avoid unnecessary complexity?", correct: "It helps users complete tasks with fewer obstacles", incorrect: ["It removes the need for all navigation", "It guarantees every phone runs at the same speed", "It means color contrast is no longer needed"] },
+            { id: "cc64", q: "In Android, which component commonly represents a screen and handles user interaction?", correct: "Activity", incorrect: ["Service", "Resource file", "Intent"] },
+            { id: "cc65", q: "A developer notices that a feature works on one phone but fails on another. Which test concern is most relevant?", correct: "Compatibility across devices and operating-system versions", incorrect: ["Typography alone", "Project branding", "The number of slides in the presentation"] },
+            { id: "cc66", q: "A user cannot tell whether a submitted form was accepted. Which design improvement is most appropriate?", correct: "Display clear confirmation or error feedback after submission", incorrect: ["Remove all status messages", "Make the submit button invisible", "Send the user back without explanation"] },
+            { id: "cc67", q: "Which description best fits blockchain technology?", correct: "A distributed ledger that records transactions securely", incorrect: ["A biological laboratory process", "A single computer's local folder", "A physical chain connecting servers"] },
+            { id: "cc68", q: "Which is a common Internet of Things (IoT) arrangement?", correct: "Connected sensors or devices that collect and exchange data", incorrect: ["Only printed documents with no devices", "A stand-alone calculator that never communicates", "A menu with multiple choices"] },
+            { id: "cc69", q: "Which framework is specifically associated with building AR experiences for Apple iOS devices?", correct: "ARKit", incorrect: ["ARCore", "JUnit", "Logcat"] },
+            { id: "cc70", q: "An AR application closes unexpectedly while loading a 3D model in Xcode. What should the developer inspect first?", correct: "The console messages and error logs", incorrect: ["The operating system installation", "The entire project deletion process", "The device wallpaper"] },
+            { id: "cc71", q: "An interface combines buttons, text boxes, and menus so users can operate a website. What is this an example of?", correct: "UI component integration", incorrect: ["Lifecycle management", "Data encryption", "Performance benchmarking"] },
+            { id: "cc72", q: "Which UI/UX principle helps users understand what the system is doing after they perform an action?", correct: "Feedback", incorrect: ["Encryption", "Deployment", "Inheritance"] },
+            { id: "cc73", q: "Which approach is best when a new technology may affect users' rights or well-being?", correct: "Evaluate potential benefits and risks, consult stakeholders, and follow applicable rules", incorrect: ["Deploy immediately without assessment", "Ignore privacy and accessibility", "Focus only on marketing"] },
+            { id: "cc74", q: "Why must security and privacy be considered in IoT systems?", correct: "Connected devices and their data can be exposed to unauthorized access", incorrect: ["Connected devices never collect information", "Security matters only for desktop apps", "Privacy rules apply only to games"] },
+            { id: "cc75", q: "What is the main purpose of augmented reality (AR)?", correct: "To place digital content over a view of the real environment", incorrect: ["To replace the physical world with a completely virtual one", "To display information only as plain text", "To remove the need for physical interaction"] }
+        ];
+
+        // Active Game State
+        let selectedCourse = 'it100'; // default
+        let questionDeck = [];       // Current active queue (includes retakes)
+        let totalUniqueQuestions = 0;
+        let masteredCount = 0;
+        let firstTryCorrectCount = 0;
+        let totalAttempts = 0;
+        let retakeCountTotal = 0;
+        
+        let playerName = "";
+        let score = 0;
+        let streak = 0;
+        let maxStreak = 0;
+        let currentCorrectOptionIndex = -1;
+        let isAnswering = false;
+
+        // Course Selector UI Update
+        function selectCourse(course) {
+            selectedCourse = course;
+            const btnIt = document.getElementById('btn-course-it100');
+            const btnCc = document.getElementById('btn-course-cc106');
+            const hint = document.getElementById('question-count-hint');
+
+            if (course === 'it100') {
+                btnIt.className = "course-btn p-4 rounded-2xl border-2 border-arcade-cyan bg-arcade-cyan/15 text-white font-bold text-sm flex flex-col items-center justify-center space-y-1 transition-all shadow-lg shadow-arcade-cyan/20 cursor-pointer select-none";
+                btnCc.className = "course-btn p-4 rounded-2xl border-2 border-slate-700 bg-slate-900/80 text-slate-400 font-bold text-sm flex flex-col items-center justify-center space-y-1 transition-all hover:border-slate-600 cursor-pointer select-none";
+                hint.innerText = "50 Randomized Questions loaded (IT100)";
+            } else {
+                btnCc.className = "course-btn p-4 rounded-2xl border-2 border-arcade-purple bg-arcade-purple/15 text-white font-bold text-sm flex flex-col items-center justify-center space-y-1 transition-all shadow-lg shadow-arcade-purple/20 cursor-pointer select-none";
+                btnIt.className = "course-btn p-4 rounded-2xl border-2 border-slate-700 bg-slate-900/80 text-slate-400 font-bold text-sm flex flex-col items-center justify-center space-y-1 transition-all hover:border-slate-600 cursor-pointer select-none";
+                hint.innerText = "75 Randomized Questions loaded (CC106)";
+            }
+        }
+
+        // Shuffle an array (Fisher-Yates)
+        function shuffleArray(array) {
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // Start Quiz Arena
+        function startQuiz() {
+            const nameInput = document.getElementById('player-name-input').value.trim();
+            if (!nameInput) {
+                showToast("Please enter your player nickname first!", false);
+                document.getElementById('player-name-input').focus();
+                return;
+            }
+            playerName = nameInput;
+            
+            let sourceQuestions = selectedCourse === 'it100' ? it100Questions : cc106Questions;
+            
+            // Deep clone questions & mark retake flag as false initially
+            questionDeck = shuffleArray(sourceQuestions.map(item => ({
+                ...item,
+                isRetake: false,
+                attempts: 0
+            })));
+
+            totalUniqueQuestions = questionDeck.length;
+            
+            if (selectedCourse === 'it100') {
+                document.getElementById('header-title').innerText = "IT100 Waygrounds";
+                document.getElementById('header-subtitle').innerText = "Spreadsheets & Data";
+            } else {
+                document.getElementById('header-title').innerText = "CC106 Waygrounds";
+                document.getElementById('header-subtitle').innerText = "App Dev & Emerging Tech";
+            }
+
+            // Reset Game Stats
+            score = 0;
+            streak = 0;
+            maxStreak = 0;
+            masteredCount = 0;
+            firstTryCorrectCount = 0;
+            totalAttempts = 0;
+            retakeCountTotal = 0;
+            updateStatsUI();
+
+            document.getElementById('total-unique-q-num').innerText = totalUniqueQuestions;
+
+            document.getElementById('screen-welcome').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.remove('hidden');
+            document.getElementById('screen-quiz').classList.add('animate-pop');
+            document.getElementById('header-stats').classList.remove('hidden');
+
+            loadQuestion();
+        }
+
+        // Load Current Question from Front of Deck
+        function loadQuestion() {
+            isAnswering = false;
+            
+            if (questionDeck.length === 0) {
+                showResults();
+                return;
+            }
+
+            const currentQ = questionDeck[0];
+            
+            // Retake badge display
+            const retakeTag = document.getElementById('retake-tag');
+            if (currentQ.isRetake) {
+                retakeTag.classList.remove('hidden');
+            } else {
+                retakeTag.classList.add('hidden');
+            }
+
+            // Header stats & counter
+            document.getElementById('completed-q-num').innerText = masteredCount;
+            document.getElementById('question-text').innerText = currentQ.q;
+            
+            const progress = (masteredCount / totalUniqueQuestions) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+
+            // Retake queue badge indicator
+            const queueBadge = document.getElementById('queue-badge');
+            const retakeCountElem = document.getElementById('retake-count');
+            const queuedRetakes = questionDeck.filter(q => q.isRetake).length;
+            
+            if (queuedRetakes > 0) {
+                retakeCountElem.innerText = queuedRetakes;
+                queueBadge.classList.remove('hidden');
+            } else {
+                queueBadge.classList.add('hidden');
+            }
+
+            const overlay = document.getElementById('feedback-overlay');
+            overlay.classList.add('hidden');
+            overlay.classList.remove('opacity-100');
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            // Options setup & shuffle
+            let options = [{ text: currentQ.correct, isCorrect: true }];
+            currentQ.incorrect.forEach(opt => options.push({ text: opt, isCorrect: false }));
+            options = shuffleArray(options);
+
+            options.forEach((opt, idx) => {
+                if(opt.isCorrect) currentCorrectOptionIndex = idx;
+
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 sm:p-5 rounded-2xl border-2 border-slate-700 bg-slate-800/80 hover:bg-slate-700 hover:border-arcade-cyan text-slate-200 font-semibold text-sm sm:text-base transition-all duration-200 flex items-center group relative overflow-hidden cursor-pointer";
+                
+                const isCode = opt.text.startsWith('=');
+                const fontClass = isCode ? 'font-mono text-arcade-cyan' : '';
+
+                btn.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-slate-900 border border-slate-600 flex items-center justify-center text-xs font-bold text-slate-400 group-hover:border-arcade-cyan group-hover:text-arcade-cyan shrink-0 mr-4 transition-colors shadow-inner pointer-events-none">
+                        ${String.fromCharCode(65 + idx)}
+                    </div>
+                    <span class="flex-grow ${fontClass} break-words leading-tight pointer-events-none">${opt.text}</span>
+                `;
+                btn.onclick = (e) => selectOption(idx, e);
+                container.appendChild(btn);
+            });
+        }
+
+        // Handle Option Selection
+        function selectOption(selectedIdx, event) {
+            if (isAnswering) return;
+            isAnswering = true;
+
+            const currentQ = questionDeck[0];
+            currentQ.attempts++;
+            totalAttempts++;
+
+            const buttons = document.getElementById('options-container').children;
+            const isCorrect = (selectedIdx === currentCorrectOptionIndex);
+            
+            const overlay = document.getElementById('feedback-overlay');
+            const icon = document.getElementById('feedback-icon');
+            overlay.classList.remove('hidden');
+            
+            for (let i = 0; i < buttons.length; i++) {
+                buttons[i].disabled = true;
+                if (i === currentCorrectOptionIndex) {
+                    buttons[i].classList.add('option-correct');
+                } else if (i === selectedIdx && !isCorrect) {
+                    buttons[i].classList.add('option-incorrect');
+                } else {
+                    buttons[i].classList.add('opacity-40');
+                }
+            }
+
+            if (isCorrect) {
+                streak++;
+                if (streak > maxStreak) maxStreak = streak;
+                
+                let points = 100 + (streak * 25);
+                if (currentQ.isRetake) points = 50; // Partial points for retaken question
+                score += points;
+
+                if (currentQ.attempts === 1) {
+                    firstTryCorrectCount++;
+                }
+
+                masteredCount++;
+
+                // Remove question from front of deck
+                questionDeck.shift();
+
+                icon.className = "fa-solid fa-check text-9xl text-arcade-green animate-pop";
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
+                
+                createParticles(event.clientX, event.clientY);
+                showToast(`+${points} Points!`, true);
+
+            } else {
+                streak = 0;
+                retakeCountTotal++;
+                
+                // Mark as retake item and shift to the back of the queue
+                currentQ.isRetake = true;
+                const wrongQ = questionDeck.shift();
+                questionDeck.push(wrongQ);
+
+                icon.className = "fa-solid fa-xmark text-9xl text-red-500 animate-pop";
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
+                
+                showToast("Wrong! Re-queued to retake later.", false);
+            }
+
+            updateStatsUI();
+
+            // Slightly longer delay on wrong answer so user can read correct choice
+            const delay = isCorrect ? 1500 : 2500;
+            setTimeout(() => {
+                loadQuestion();
+            }, delay);
+        }
+
+        function updateStatsUI() {
+            document.getElementById('stat-score').innerText = score;
+            document.getElementById('quiz-streak').innerText = streak + 'x';
+            document.getElementById('stat-streak').innerText = streak;
+            
+            const streakElement = document.getElementById('quiz-streak');
+            if(streak >= 3) {
+                streakElement.className = "text-arcade-yellow font-black animate-pulse";
+            } else {
+                streakElement.className = "font-bold";
+            }
+        }
+
+        function createParticles(x, y) {
+            if (!x || !y) return;
+            const colors = ['#10b981', '#06b6d4', '#ec4899', '#f59e0b'];
+            for (let i = 0; i < 12; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 50 + Math.random() * 50;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+                
+                particle.style.setProperty('--tx', `${tx}px`);
+                particle.style.setProperty('--ty', `${ty}px`);
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                document.body.appendChild(particle);
+                setTimeout(() => particle.remove(), 1000);
+            }
+        }
+
+        // Show Results Screen
+        function showResults() {
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('header-stats').classList.add('hidden');
+            
+            const resultsScreen = document.getElementById('screen-results');
+            resultsScreen.classList.remove('hidden');
+            resultsScreen.classList.add('animate-pop');
+
+            document.getElementById('results-player-name').innerText = `Outstanding mastery, ${playerName}!`;
+            document.getElementById('res-score').innerText = score;
+            
+            const firstTryAccuracy = Math.round((firstTryCorrectCount / totalUniqueQuestions) * 100);
+            document.getElementById('res-accuracy').innerText = firstTryAccuracy + '%';
+            document.getElementById('res-retakes-val').innerText = retakeCountTotal;
+            document.getElementById('res-streak-val').innerText = maxStreak + 'x';
+        }
+
+        // Restart Quiz
+        function restartQuiz() {
+            document.getElementById('screen-results').classList.add('hidden');
+            document.getElementById('player-name-input').value = "";
+            document.getElementById('screen-welcome').classList.remove('hidden');
+            document.getElementById('screen-welcome').classList.add('animate-pop');
+        }
+
+        // Share Score
+        function shareScore() {
+            const firstTryAccuracy = Math.round((firstTryCorrectCount / totalUniqueQuestions) * 100);
+            const courseName = selectedCourse === 'it100' ? 'IT 100' : 'CC 106';
+            const shareText = `⚡ Waygrounds Quiz Arena (${courseName}) Cleared!\n👤 Player: ${playerName}\n🏆 Final Score: ${score}\n🎯 1st-Try Mastery: ${firstTryAccuracy}%\n🔄 Retakes Cleared: ${retakeCountTotal}\n🔥 Max Streak: ${maxStreak}x\n\nI mastered every question! Can you beat my score?`;
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(shareText).then(() => {
+                    showToast("Score copied! Paste it to your friends.", true);
+                }).catch(() => {
+                    fallbackCopyText(shareText);
+                });
+            } else {
+                fallbackCopyText(shareText);
+            }
+        }
+
+        function fallbackCopyText(text) {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.style.position = "fixed";
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast("Score copied! Paste it to your friends.", true);
+            } catch (err) {
+                showToast("Unable to copy automatically.", false);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // Modal Controls
+        function openShareGuide() {
+            const modal = document.getElementById('share-modal');
+            const content = document.getElementById('share-modal-content');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeShareGuide() {
+            const modal = document.getElementById('share-modal');
+            const content = document.getElementById('share-modal-content');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // Toast Notification
+        function showToast(msg, isSuccess = true) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            
+            if(isSuccess) {
+                toast.classList.replace('border-red-500', 'border-arcade-green');
+                toast.querySelector('i').className = "fa-solid fa-circle-check text-arcade-green text-xl";
+            } else {
+                toast.classList.replace('border-arcade-green', 'border-red-500');
+                toast.querySelector('i').className = "fa-solid fa-circle-exclamation text-red-500 text-xl";
+            }
+
+            toast.classList.remove('-translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-4', 'opacity-100');
+            
+            setTimeout(() => {
+                toast.classList.add('-translate-y-20', 'opacity-0');
+                toast.classList.remove('translate-y-4', 'opacity-100');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
